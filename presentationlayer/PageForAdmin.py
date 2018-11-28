@@ -15,45 +15,85 @@ class PageForAdmin:
     password = ""
     current_table = ""
     tables_list = []
+    temp_rows_detail = {}
+    temp_rows_name = []
 
+    # Hello, if you are a visitor, read this function clearly for understanding what this system goes.
     def show_the_main_menu_to_admin(self):
         print("")
         print("--------Welcome to this management system--------\n")
 
         while True:
             print("------------Please choose our services-----------\n"
-                  "-                                               -\n"
-                  "-           [C] connect to database             -\n"
-                  "-          [GG] help                            -\n"
-                  "-           [Q] quit                            -\n"
+                  "-        'help' for detail                      -\n"
+                  "-        [gate] database connect                -\n"
+                  "-        [help] help                            -\n"
+                  "-        [quit] quit                            -\n"
                   "-                                               -\n"
                   "--------Now, use your keyboard and choose--------")
 
             choose = input(">>").strip()
 
-            if choose == "C":
-                print("C was input")
-                self.connect_in_database()
-            elif choose == "GG":
+            # UnitTest
+            # Empty Code
+
+            # Format Work
+            if choose[0:4] == "gate":
+                # Command will be:gate -u username -p password
+                self.connect_in_database(choose)
+            elif choose[0:4] == "help":
                 print("help")
                 self.instructions()
-            elif choose == "Q":
+            elif choose[0:4] == "quit":
                 # Quit the system
                 print("Quit the system, thanks for your using")
                 break
 
-    def connect_in_database(self):
+    def command_check(self, command):
+        # Command will be:gate -u username -p password
+        # Skin the pea!
+        # Find the index of '-u'
+        s = command.find("-u")
+        if s == -1:
+            print("Format Error, check your arguments")
+            return
+
+        # Strip Work
+        if command[s + 2] != " ":
+            print("Format Error, check your arguments")
+            return
+
+        while command[s + 2] == " ":
+            s += 1
+
+        command = command[s + 2:]
+        # Get your username
+        s = command.find("-p")
+        if s == -1:
+            print("Format Error, check your arguments")
+            return
+
+        while command[s - 1] == " ":
+            # Strip Work
+            s -= 1
+        username = command[0:s]
+        # print(username.strip())
+
+        # Get your password
+        s = command.find("-p")
+        # Strip Work
+        if command[s + 2] != " ":
+            print("Format Error, check your arguments")
+            return
+
+        while command[s + 2] == " ":
+            s += 1
+        password = command[s + 2:]
+        return username, password
+
+    def connect_in_database(self, command):
         try:
-            # connect mysql by name and pw(unittest)
-            # self.cursor = pymysql.connect("localhost", "qinne", "111111")
-
-            # connect mysql by name and pw(formal)
-            print("Please input your name and your password")
-
-            # invaild in pycharm
-            # password = getpass.getpass("Password:")
-            username = input("Name:")
-            password = input("Password:")
+            username, password = self.command_check(command)
             self.myconnection = pymysql.connect("localhost", username, password)
             self.cursor = self.myconnection.cursor()
 
@@ -70,8 +110,9 @@ class PageForAdmin:
         while True:
             print("------------Please choose our services-----------\n"
                   "-                                               -\n"
-                  "-           [S] show all database               -\n"
-                  "-         [TAS] show all table                  -\n"
+                  "-            [show 'dbs'/'tables']              -\n"
+                  "-                 [tds/tas]                     -\n"
+                  "-            [use database/table]               -\n"
                   "-          [CD] create one database             -\n"
                   "-          [SD] select one database             -\n"
                   "-          [ST] select one table                -\n"
@@ -89,15 +130,33 @@ class PageForAdmin:
             print(current_status)
             choose = input(">>").strip()
 
-            if choose == "S":
-                print("S was input")
+            if choose[0:4] == "show":
+                if choose[4] != " ":
+                    print("Format Error, check your command")
+                    continue
+                choose = choose[4:].strip()
+                if choose == "dbs":
+                    self.show_all_database()
+                if choose == "tables" and self.status_in_database:
+                    self.show_all_table()
+
+            if choose == "tds":
                 self.show_all_database()
-            elif choose == "CD":
+            elif choose == "tas" and self.status_in_database:
+                self.show_all_table()
+
+            if choose[0:3] == "use":
+                # use database or use table
+                if choose[4] != " ":
+                    print("Format Error, check your command")
+                    continue
+                choose = choose[3:].strip()
+                # choose must be a name of database or table
+                # use self.status_in_database to judge
+
+            if choose == "CD":
                 print("CD was input")
                 self.create_one_database()
-            elif choose == "TAS" and self.status_in_database:
-                print("TAS was input")
-                self.show_all_table()
             elif choose == "CT" and self.status_in_database:
                 print("CT was input")
                 self.create_one_table()
@@ -127,7 +186,21 @@ class PageForAdmin:
                 break
 
     def instructions(self):
-        pass
+        print("HELP:")
+        print("   COMMAND   AUG_NUM   AUG_LIST\n"
+              "   gate      2         [-u username must, -p password must]\n"
+              "   use for connecting your database\n"
+              "   help      0         []\n"
+              "   use for getting the detail of commands\n"
+              "   quit      0         []\n"
+              "   use for quitting the system\n"
+              "   show      1         ['dbs'/'tables' must]\n"
+              "   show all databases or tables, you can only get tables while in exact database\n"
+              "   tds       0         []\n"
+              "   show databases quickly\n"
+              "   tas       0         []\n"
+              "   show tables quickly\n"
+              )
 
     def preload(self, username, password):
         self.cursor.execute('show databases')
@@ -192,13 +265,13 @@ class PageForAdmin:
         execute_sen = ""
         base_name = input("Input a name for creating a table:")
         execute_sen = "create table %s(" % (base_name.strip())
-        column_input = True
-        columns_name = []
-        columns = {}
+        row_input = True
+        rows_name = []
+        rows = {}
         is_it_has_key = False
-        while column_input:
-            name = input("Input a name for a column:")
-            style = input("Input a style for a column:")
+        while row_input:
+            name = input("Input a name for a row:")
+            style = input("Input a style for a row:")
 
             if is_it_has_key == False:
                 quit_ask = input("Want to make it primary key?(Y/N)")
@@ -208,17 +281,17 @@ class PageForAdmin:
                 if quit_ask == "N":
                     style += ""
 
-            columns[name] = style
-            columns_name.append(name)
+            rows[name] = style
+            rows_name.append(name)
 
             quit_ask = input("Want to continue input?(Y/N)")
             if quit_ask == "Y":
-                column_input = True
+                row_input = True
             if quit_ask == "N":
-                column_input = False
+                row_input = False
 
-        for name in columns_name:
-            execute_sen += "%s %s," % (name, columns[name])
+        for name in rows_name:
+            execute_sen += "%s %s," % (name, rows[name])
 
         execute_sen = list(execute_sen)
         execute_sen[len(execute_sen) - 1] = ")"
@@ -240,42 +313,112 @@ class PageForAdmin:
         pass
 
     def show_one_info(self):
-        pass
+        try:
+            # Show all rows' name for checking
+            self.describe_the_info()
+            fields = ""
+            for name in self.temp_rows_name:
+                fields += name + ","
+            fields = fields[:-1]
+            row_name = input("Input the row's name which you will use to query(%s):" % fields)
+
+            i = 1
+
+            for name in self.temp_rows_name:
+                if name == row_name:
+                    i = 0
+                    break
+
+            if i == 1:
+                print("Row's name wrong, back to menu")
+
+            row_info = input("Input the info of this row(style:%s):" % self.temp_rows_detail[row_name])
+            row_want = input("Input the raw you want to know, '*' means all, row divided by dot:")
+
+            self.cursor.execute("select %s from %s where %s = '%s'" % (row_want, self.current_table, row_name, row_info))
+            get_info = self.cursor.fetchall()
+            print("Result Show")
+            for row in get_info:
+                print(str(row))
+
+        except pymysql.err.ProgrammingError as pe:
+            print("Error occur:" + str(pe))
+        except TypeError as te:
+            print("Error occur " + str(te))
 
     def insert_one_info(self):
-        self.describe_the_info()
-        # Insert the info
-        # 识别列的格式，自动帮助填补格式
+        try:
+            self.describe_the_info()
+            # Insert the info
+            i = len(self.temp_rows_detail) - 1
+            ii = 0
 
-        pass
+            row_datas = {}
+            fields = ""
+            datas = ""
+
+            print("Please input your data, input NULLPY for ignore this column")
+            while ii <= i:
+                # 将数据表暂存表分拆表示，用以用户输入数据
+                row_name = self.temp_rows_name[ii]
+                row_style = self.temp_rows_detail[row_name]
+                row_data = input("%s[style limit:%s]>>" % (row_name, row_style))
+                if row_data.strip() != "NULLPY":
+                    row_datas[row_name] = row_data
+                    fields += row_name + ","
+                    datas += "'" + row_data + "'" + ","
+                ii += 1
+
+            if fields == "" or datas == "":
+                print("Empty data, stop insert")
+                return
+
+            fields = fields[:-1]
+            datas = datas[:-1]
+            row_insert_execute_sen = "insert into %s(%s) values(%s)" % (self.current_table, fields, datas)
+            print(row_insert_execute_sen)
+            result = self.cursor.execute(row_insert_execute_sen)
+            self.myconnection.commit()
+            if result == 1:
+                print("Insert Success")
+            else:
+                print("Insert Fail")
+        except pymysql.err.ProgrammingError as pe:
+            print("Error occur:" + str(pe))
 
 
     def describe_the_info(self):
-        if len(self.tables_list) == 0:
-            self.show_all_table()
-        else:
-            print("Here is the list of tables:")
-            for row in self.tables_list:
-                print(row)
+        try:
+            if len(self.tables_list) == 0:
+                self.show_all_table()
+            else:
+                print("Here is the list of tables:")
+                for row in self.tables_list:
+                    print(row)
 
-        # Choose the table to insert
-        # Describe the table
-        table_name = input("Input the name of the table:")
-        self.cursor.execute("desc " + table_name)
-        column_info = self.cursor.fetchall()
-        columns_detail = {}
-        for row in column_info:
-            tmp = "%2s" % str(row)
-            print(tmp)
-            # Handle the info of row
-            start_end_dict = {"('": "',", ", '": "',"}
-            dict_index = ["('", ", '"]
-            # One column once
-            column_name, column_style = self.analysis_column(start_end_dict, dict_index, tmp)
-            columns_detail[column_name] = column_style
-        print(columns_detail)
+            # Choose the table to insert
+            # Describe the table
+            table_name = input("Input the name of the table:")
+            self.cursor.execute("desc " + table_name)
+            row_info = self.cursor.fetchall()
+            self.temp_rows_detail.clear()
+            self.temp_rows_name.clear()
+            self.current_table = table_name
+            for row in row_info:
+                tmp = "%2s" % str(row)
+                # print(tmp)
+                # Handle the info of row
+                start_end_dict = {"('": "',", ", '": "',"}
+                dict_index = ["('", ", '"]
+                # One row once
+                row_name, row_style = self.analysis_row(start_end_dict, dict_index, tmp)
+                self.temp_rows_detail[row_name] = row_style
+                self.temp_rows_name.append(row_name)
+            print(self.temp_rows_detail)
+        except pymysql.err.ProgrammingError as pe:
+            print("Error occur " + pe)
 
-    def analysis_column(self, start_end_dict, dict_index, base_string):
+    def analysis_row(self, start_end_dict, dict_index, base_string):
         index_num = 0
         # Find the start index
         start1 = dict_index[index_num]
@@ -289,15 +432,15 @@ class PageForAdmin:
             sub_str = base_string[s+len(start1):e]
 
             if index_num == 0:
-                column_name = sub_str
+                row_name = sub_str
             if index_num == 1:
-                column_style = sub_str
+                row_style = sub_str
 
             # Now get the style
             index_num += 1
             if index_num == 2:
                 # Will work after getting the name and style
-                return column_name, column_style
+                return row_name, row_style
             # Find the next start index
             start1 = dict_index[index_num]
             end1 = start_end_dict[start1]
