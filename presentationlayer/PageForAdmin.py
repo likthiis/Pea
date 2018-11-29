@@ -8,12 +8,12 @@ import subprocess
 class PageForAdmin:
     cursor = "init for use"
     database_list = []
-    now_database = "(NO A NAME)you havent choosed"
+    now_database = "(NO A NAME)you have not chose"
     status_in_database = False
     myconnection = "init for use"
     username = ""
     password = ""
-    current_table = ""
+    current_table = "(NO A NAME)you have not chose"
     tables_list = []
     temp_rows_detail = {}
     temp_rows_name = []
@@ -107,30 +107,38 @@ class PageForAdmin:
 
     def database_use_panel(self):
         print("------------Database Operation System------------\n")
+        show_the_menu = "need"
         while True:
-            print("------------Please choose our services-----------\n"
-                  "-                                               -\n"
-                  "-            [show 'dbs'/'tables']              -\n"
-                  "-                 [tds/tas]                     -\n"
-                  "-            [use database/table]               -\n"
-                  "-          [CD] create one database             -\n"
-                  "-          [SD] select one database             -\n"
-                  "-          [ST] select one table                -\n"
-                  "-          [CT] create one table                -\n"
-                  "-           [I] insert one info                 -\n"
-                  "-           [S] show one info                   -\n"
-                  "-           [U] update one info                 -\n"
-                  "-           [D] delete one info                 -\n"
-                  "-          [GG] help                            -\n"
-                  "-           [Q] quit                            -\n"
-                  "-                                               -\n"
-                  "--------Now, use your keyboard and choose--------")
 
-            current_status = "Status:\nCurrent Database:%s\nCurrent User:%s" % (self.now_database, self.username)
-            print(current_status)
+            if show_the_menu == "need":
+                print("------------Please choose our services-----------\n"
+                      "-                                               -\n"
+                      "-            [show 'dbs'/'tables']              -\n"
+                      "-                 [tds/tas]                     -\n"
+                      "-               [use database]                  -\n"
+                      "-             [create db database]              -\n"
+                      "-          [CD] create one database             -\n"
+                      "-          [CT] create one table                -\n"
+                      "-           [I] insert one info                 -\n"
+                      "-           [S] show one info                   -\n"
+                      "-           [U] update one info                 -\n"
+                      "-           [D] delete one info                 -\n"
+                      "-                   [help]                      -\n"
+                      "-                   [hide]                      -\n"
+                      "-                   [quit]                      -\n"
+                      "-                                               -\n"
+                      "--------Now, use your keyboard and choose--------")
+
+                current_status = "Status:\n" \
+                                 "Current Database:%s\n" \
+                                 "Current Table:%s\n" \
+                                 "Current User:%s\n" % (self.now_database, self.current_table, self.username)
+                print(current_status)
+            show_the_menu = "need"
             choose = input(">>").strip()
 
             if choose[0:4] == "show":
+                show_the_menu = "needn't"
                 if choose[4] != " ":
                     print("Format Error, check your command")
                     continue
@@ -141,18 +149,48 @@ class PageForAdmin:
                     self.show_all_table()
 
             if choose == "tds":
+                show_the_menu = "needn't"
                 self.show_all_database()
             elif choose == "tas" and self.status_in_database:
                 self.show_all_table()
 
+            if choose == "tas":
+                show_the_menu = "needn't"
+
             if choose[0:3] == "use":
                 # use database or use table
-                if choose[4] != " ":
+                if choose[3] != " ":
                     print("Format Error, check your command")
                     continue
                 choose = choose[3:].strip()
                 # choose must be a name of database or table
                 # use self.status_in_database to judge
+                a = False
+                for row in self.database_list:
+                    if choose == row:
+                        a = True
+                        show_the_menu = "needn't"
+                        self.select_one_database(choose)
+
+                if a is False or self.status_in_database is False:
+                    show_the_menu = "needn't"
+                    print("This name cannot be found in databases, please check clearly")
+
+            if choose[0:6] == "create":
+                if choose[6] != " ":
+                    print("Format Error, check your command")
+                    continue
+                choose = choose[6:].strip()
+                if choose[0:3] != "db ":
+                    print("Format Error, check your command")
+                    continue
+
+                if choose[0:2] == "db":
+                    show_the_menu = "needn't"
+                    choose = choose[2:].strip()
+                    print(choose)
+                    self.create_one_database(choose)
+
 
             if choose == "CD":
                 print("CD was input")
@@ -160,9 +198,6 @@ class PageForAdmin:
             elif choose == "CT" and self.status_in_database:
                 print("CT was input")
                 self.create_one_table()
-            elif choose == "SD":
-                print("SD was input")
-                self.select_one_database()
             elif choose == "I" and self.status_in_database:
                 print("I was input")
                 self.insert_one_info()
@@ -175,12 +210,12 @@ class PageForAdmin:
             elif choose == "D" and self.status_in_database:
                 print("D was input")
                 self.delete_one_info()
-            elif choose == "GG":
+            elif choose == "help":
                 print("help")
                 self.instructions()
-            elif self.status_in_database == False:
-                print("You are out of any database, choose one first")
-            elif choose == "Q":
+            # elif self.status_in_database is False:
+            #     print("You are out of any database, choose one first")
+            elif choose == "quit":
                 # Quit this subsystem
                 print("Quit Database Operation System")
                 break
@@ -230,9 +265,9 @@ class PageForAdmin:
             tmp = "%2s" % row
             print(tmp)
 
-    def create_one_database(self):
-        print("Input a name for creation:")
-        new_one = input(">>")
+    def create_one_database(self, new_one):
+        # print("Input a name for creation:")
+        # new_one = input(">>")
         for row in self.database_list:
             if new_one == row:
                 print("Database Exist")
@@ -244,18 +279,18 @@ class PageForAdmin:
         else:
             print("Database Failed")
 
-    def select_one_database(self):
+    def select_one_database(self, database_name):
         try:
-            print("Input a name for choosing:")
+            # print("Input a name for choosing:")
             # Close current connection, and open another one
-            base_name = input(">>")
+            # base_name = input(">>")
             self.cursor.close()
             self.myconnection.close()
-            self.myconnection = pymysql.connect("localhost", self.username, self.password, base_name)
+            self.myconnection = pymysql.connect("localhost", self.username, self.password, database_name)
             self.cursor = self.myconnection.cursor()
-            self.now_database = base_name
+            self.now_database = database_name
             self.status_in_database = True
-            print("Connection Success, now use " + base_name)
+            print("Connection Success, now use " + database_name)
 
         except pymysql.err.OperationalError as e:
             print("Error occur:" + str(e))
